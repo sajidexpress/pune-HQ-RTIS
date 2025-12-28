@@ -790,13 +790,14 @@
       }
 
       function formatDateTime(input) {
-        if (!input) return "-";
+        const d = new Date(input.replace(" ", "T"));
 
-        const [datePart, timePart] = input.split(" ");
-        const [yyyy, mm, dd] = datePart.split("-");
-        const [hh, min] = timePart.split(":");
+        const pad = (n) => String(n).padStart(2, "0");
 
-        return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
+        return (
+          `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ` +
+          `${pad(d.getHours())}:${pad(d.getMinutes())}`
+        );
       }
 
       // CSV Import
