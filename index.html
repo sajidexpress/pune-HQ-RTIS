@@ -789,6 +789,16 @@
         return { text: "FAIL (no event)", startIndex: -1, endIndex: -1 };
       }
 
+      function formatDateTime(input) {
+        if (!input) return "-";
+
+        const [datePart, timePart] = input.split(" ");
+        const [yyyy, mm, dd] = datePart.split("-");
+        const [hh, min] = timePart.split(":");
+
+        return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
+      }
+
       // CSV Import
       document.getElementById("csvFile").addEventListener("change", (e) => {
         const f = e.target.files[0];
@@ -818,7 +828,7 @@
             .map((l) => {
               const c = l.split(",");
               return {
-                gps: (c[g] || "").trim(),
+                gps: (formatDateTime(c[g]) || "").trim(),
                 spd: parseFloat((c[s] || "").trim()),
                 st: (c[st] || "").trim(),
                 dist: parseFloat((c[d] || "0").trim()) || 0,
