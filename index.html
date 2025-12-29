@@ -653,6 +653,15 @@
           </div>
         </div>
       </div>
+      <div class="card card-app mb-3 report-block">
+        <div class="card-header card-header-app">
+          <h6 class="mb-0">All Halt Braking Pattern</h6>
+          <small class="text-muted">Distance vs Speed (All Stations)</small>
+        </div>
+        <div class="card-body">
+          <canvas id="haltBrakeChart"></canvas>
+        </div>
+      </div>
 
       <!-- TABLES & IRREGULARITIES = PAGE 2 -->
       <div id="speedTableContainer" class="page-2"></div>
@@ -673,42 +682,70 @@
       }
 
       function calculateDuration(startStr, endStr) {
-        if (!startStr || !endStr) {
-          return { totalSeconds: 0, formatted: "-" };
-        }
+        if (!startStr || !endStr) return { formatted: "-" };
 
-        const extractTime = (str) => {
-          const parts = str.trim().split(" ");
-          let t = parts.pop();
-          if (!t || !t.includes(":")) return null;
-          let bits = t.split(":");
-          if (bits.length === 2) bits.push("00");
-          return bits.map((b) => b.padStart(2, "0")).join(":");
+        const getSec = (s) => {
+          const time = s.split(" ").pop();
+          const [h, m, sec] = time.split(":").map(Number);
+          return h * 3600 + m * 60 + sec;
         };
 
-        const sTime = extractTime(startStr);
-        const eTime = extractTime(endStr);
+        let diff = getSec(endStr) - getSec(startStr);
+        if (diff < 0) diff += 86400;
 
-        if (!sTime || !eTime) {
-          return { totalSeconds: 0, formatted: "-" };
-        }
+        const h = Math.floor(diff / 3600);
+        const m = Math.floor((diff % 3600) / 60);
+        const s = diff % 60;
 
-        const toSeconds = (t) => {
-          const [h, m, s] = t.split(":").map(Number);
-          return h * 3600 + m * 60 + s;
-        };
-
-        let diff = toSeconds(eTime) - toSeconds(sTime);
-        if (diff < 0) diff += 24 * 3600;
-
-        const hrs = Math.floor(diff / 3600);
-        const mins = Math.floor((diff % 3600) / 60);
-        const secs = diff % 60;
-
-        return {
-          totalSeconds: diff,
-          formatted: `${hrs}h ${mins}m ${secs}s`,
-        };
+        return { formatted: `${h}h ${m}m ${s}s` };
+      }
+      const speedLimits = {
+        d10: 10,
+        d1000: trainType === "goods" ? 30 : 40,
+        d2000: trainType === "goods" ? 55 : 100,
+      };
+      function buildSpeedLimitLines(limits) {
+        return [
+          {
+            label: "Limit @10 m",
+            data: [
+              { x: 10, y: limits.d10 },
+              { x: 2000, y: limits.d10 },
+            ],
+            borderColor: "red",
+            borderWidth: 2,
+            borderDash: [6, 6],
+            pointRadius: 0,
+          },
+          {
+            label: "Limit @1000 m",
+            data: [
+              { x: 10, y: limits.d1000 },
+              { x: 2000, y: limits.d1000 },
+            ],
+            borderColor: "red",
+            borderWidth: 2,
+            borderDash: [6, 6],
+            pointRadius: 0,
+          },
+          {
+            label: "Limit @2000 m",
+            data: [
+              { x: 10, y: limits.d2000 },
+              { x: 2000, y: limits.d2000 },
+            ],
+            borderColor: "red",
+            borderWidth: 2,
+            borderDash: [6, 6],
+            pointRadius: 0,
+          },
+        ];
+      }
+      function csvToDDMMYYYY(str) {
+        if (!str) return "-";
+        const m = str.match(/^(\d{4})-(\d{2})-(\d{2})(.*)$/);
+        if (!m) return str;
+        return `${m[3]}-${m[2]}-${m[1]}${m[4]}`;
       }
 
       // Keep formatDate for form inputs (runDate / analysedOn)
@@ -723,7 +760,7 @@
           const yyyy = ymd[1];
           const mm = zp(ymd[2]);
           const dd = zp(ymd[3]);
-          return `${dd}/${mm}/${yyyy}`;
+          return `${dd}-${mm}-${yyyy}`; // ✅ CHANGE
         }
 
         const dmy = datePart.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
@@ -731,7 +768,7 @@
           const dd = zp(dmy[1]);
           const mm = zp(dmy[2]);
           const yyyy = dmy[3];
-          return `${dd}/${mm}/${yyyy}`;
+          return `${dd}-${mm}-${yyyy}`; // ✅ CHANGE
         }
 
         const dt = new Date(datePart);
@@ -739,7 +776,7 @@
           const dd = zp(dt.getDate());
           const mm = zp(dt.getMonth() + 1);
           const yyyy = dt.getFullYear();
-          return `${dd}/${mm}/${yyyy}`;
+          return `${dd}-${mm}-${yyyy}`; // ✅ CHANGE
         }
 
         return "-";
@@ -788,18 +825,6 @@
         }
         return { text: "FAIL (no event)", startIndex: -1, endIndex: -1 };
       }
-
-      function formatDateTime(input) {
-        const d = new Date(input.replace(" ", "T"));
-
-        const pad = (n) => String(n).padStart(2, "0");
-
-        return (
-          `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ` +
-          `${pad(d.getHours())}:${pad(d.getMinutes())}`
-        );
-      }
-
       // CSV Import
       document.getElementById("csvFile").addEventListener("change", (e) => {
         const f = e.target.files[0];
@@ -811,7 +836,7 @@
             .filter((l) => l.trim() !== "");
           const h = lines[0].split(",").map((v) => v.trim().toLowerCase());
           const g = h.findIndex(
-            (v) => v === "gps time" || v === "logging time"
+            (v) => v === "logging time" || v === "gps time"
           );
           const s = h.findIndex((v) => v === "speed");
           const st = h.findIndex((v) => v.includes("stationcode"));
@@ -829,7 +854,7 @@
             .map((l) => {
               const c = l.split(",");
               return {
-                gps: (formatDateTime(c[g]) || "").trim(),
+                gps: (c[g] || "").trim(),
                 spd: parseFloat((c[s] || "").trim()),
                 st: (c[st] || "").trim(),
                 dist: parseFloat((c[d] || "0").trim()) || 0,
@@ -928,24 +953,10 @@
         // ---------- LABELS: preserve CSV gps strings verbatim (with small suffix on duplicates) ----------
         let secondCounter = 0;
         let prevTime = "";
-        const labels = seg.map((x) => {
-          const raw = x.gps || "";
-          if (raw === prevTime) {
-            secondCounter++;
-          } else {
-            secondCounter = 0;
-            prevTime = raw;
-          }
-          const suffix =
-            secondCounter > 0
-              ? ":" + String(secondCounter).padStart(2, "0")
-              : "";
-          return raw + suffix;
-        });
+        const labels = seg.map((x) => x.gps);
 
         // ---------- chartDate from first CSV row (preserve original CSV date-part) ----------
-        const firstGpsDatePart = seg[0]?.gps?.split(" ")?.[0] || "";
-        const chartDate = firstGpsDatePart || "";
+        const chartDate = seg[0]?.gps || "";
 
         const speeds = seg.map((x) => x.spd);
         const dists = seg.map((x) => x.dist);
@@ -1054,6 +1065,117 @@
           }
           return res;
         });
+        const haltCtx = document
+          .getElementById("haltBrakeChart")
+          .getContext("2d");
+
+        const haltDatasets = buildHaltBrakingDatasets(seg, stopStations, dists);
+
+        if (window.haltBrakeChartInstance) {
+          window.haltBrakeChartInstance.destroy();
+        }
+
+        window.haltBrakeChartInstance = new Chart(haltCtx, {
+          type: "line",
+          data: {
+            datasets: haltDatasets,
+          },
+          options: {
+            responsive: true,
+            animation: false,
+            scales: {
+              x: {
+                type: "linear",
+                reverse: true,
+                title: {
+                  display: true,
+                  text: "Distance Before Stop (m)",
+                },
+                ticks: {
+                  font: { weight: "bold" },
+                },
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: "Speed (km/h)",
+                },
+                min: 0,
+                ticks: {
+                  font: { weight: "bold" },
+                },
+              },
+            },
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: {
+                  boxWidth: 14,
+                  font: { size: 11 },
+                },
+              },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) =>
+                    `${ctx.dataset.label}: ${ctx.parsed.y} km/h @ ${Math.round(
+                      ctx.parsed.x
+                    )} m`,
+                },
+              },
+            },
+          },
+        });
+
+        function buildHaltBrakingDatasets(seg, stopStations, dists) {
+          const colors = [
+            "#ef4444",
+            "#2563eb",
+            "#16a34a",
+            "#f97316",
+            "#7c3aed",
+            "#0ea5e9",
+          ];
+
+          let datasets = [];
+          let colorIndex = 0;
+
+          stopStations.forEach((stop) => {
+            let cum = 0;
+            let points = [];
+
+            for (let i = stop.index; i >= 0; i--) {
+              cum += dists[i] || 0;
+
+              // stop at 2000 m
+              if (cum > 2000) break;
+
+              // braking only
+              if (seg[i].spd > 0) {
+                points.push({
+                  x: cum,
+                  y: seg[i].spd,
+                });
+              }
+            }
+
+            // reverse so distance increases left → right
+            points.reverse();
+
+            if (points.length > 5) {
+              datasets.push({
+                label: stop.station,
+                data: points,
+                borderColor: colors[colorIndex % colors.length],
+                borderWidth: 2,
+                pointRadius: 0,
+                tension: 0.25,
+              });
+              colorIndex++;
+            }
+          });
+
+          return datasets;
+        }
 
         // ---------- Use raw CSV strings for start/end times ----------
         const startTimeStr = seg[0]?.gps || "-";
@@ -1383,19 +1505,15 @@
               x: {
                 title: { display: true, text: "Time (HH:MM:SS)" },
                 ticks: {
-                  callback: (v, index) => labels[index] || "",
-                  maxTicksLimit: 50,
-                  autoSkip: true,
-                  autoSkipPadding: 10,
+                  callback: (val, index) => labels[index] || "",
                   maxRotation: 90,
                   minRotation: 45,
-                  font: {
-                    weight: PRINT_MODE ? "bold" : "",
-                    size: 11,
-                  },
-                  color: PRINT_MODE ? "#000000" : "#111827",
+                  autoSkip: true,
+                  maxTicksLimit: 40,
+                  font: { weight: "bold", size: 11 },
                 },
               },
+
               y: {
                 title: { display: true, text: "Speed (km/h)" },
                 min: 0,
