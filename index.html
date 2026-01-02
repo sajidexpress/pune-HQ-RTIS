@@ -673,7 +673,37 @@
       let stationCodes = [];
       let PRINT_MODE = false;
       let LAST_REPORT_PAYLOAD = null;
+      const haltPatternLabels = {
+        id: "haltPatternLabels",
+        afterDatasetsDraw(chart) {
+          const ctx = chart.ctx;
 
+          ctx.save();
+          ctx.font = "bold 12px Arial";
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+
+          chart.data.datasets.forEach((ds, i) => {
+            const meta = chart.getDatasetMeta(i);
+            if (!meta || meta.hidden) return;
+
+            const points = meta.data;
+            if (!points || points.length === 0) return;
+
+            // Label near the last point (closest to stop)
+            const lastPoint = points[points.length - 1];
+
+            ctx.fillStyle = ds.borderColor || "#000";
+            ctx.fillText(
+              ds.label, // Station Code
+              lastPoint.x + 6, // small right offset
+              lastPoint.y
+            );
+          });
+
+          ctx.restore();
+        },
+      };
       function findZeroIndex(d, code, from) {
         for (let i = from; i < d.length; i++) {
           if (d[i].st === code && d[i].spd === 0) return i;
@@ -1123,6 +1153,7 @@
                 },
               },
             },
+            plugins: [haltPatternLabels], // ✅ ADD THIS LINE
           },
         });
 
