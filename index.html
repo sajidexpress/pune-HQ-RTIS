@@ -11,6 +11,8 @@
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <style>
     /* ---------- GLOBAL LAYOUT & THEME ---------- */
@@ -152,14 +154,16 @@
     }
 
     .btn-app-success {
-      background: linear-gradient(135deg, #31ef54, #1dd862);
+      background: linear-gradient(135deg, #16a34a, #15803d);
       border: none;
       border-radius: 999px;
       font-weight: 700;
       padding-inline: 1.7rem;
       padding-block: 0.5rem;
       font-size: 0.9rem;
-      box-shadow: 0 8px 25px rgba(37, 99, 235, 0.45);
+      box-shadow: 0 8px 25px rgba(1, 26, 10, 0.45);
+      color: #c21d1d !important;
+      /* ✅ FIX */
     }
 
     .btn-app-success:hover {
@@ -168,7 +172,7 @@
     }
 
     .btn-app-success:disabled {
-      background: grey;
+      background: rgb(5, 182, 17);
     }
 
     .btn-app-outline {
@@ -199,10 +203,6 @@
     }
 
     /* ---------- CHART ---------- */
-    canvas {
-      width: 100% !important;
-      height: 580px !important;
-    }
 
     .legend-note {
       text-align: center;
@@ -341,9 +341,6 @@
       font-weight: 700;
     }
 
-    .report-block {
-      page-break-inside: avoid;
-    }
 
     /* TRAIN PERFORMANCE OVERVIEW – STRONG BLACK HEADER */
     table tr:first-child th {
@@ -385,18 +382,11 @@
       html,
       body {
         background: #ffffff !important;
-        padding: 0;
         margin: 0;
+        padding: 0;
       }
 
-      .app-shell {
-        padding: 4mm 6mm;
-        max-width: 100%;
-      }
-
-      /* Controls and dropdowns hide on print */
-      .controls-wrapper,
-      .dropdown-menu {
+      .controls-wrapper {
         display: none !important;
       }
 
@@ -406,66 +396,43 @@
         border-radius: 0 !important;
       }
 
-      /* Chart slightly smaller for print so it fits page 1 */
-      canvas {
-        height: 400px !important;
-        margin-top: 0;
+      /* PAGE BREAKS */
+      .page-1 {
+        page-break-after: always;
       }
 
-      /* Tables compact to help pagination */
+      .page-2 {
+        page-break-before: always;
+        page-break-after: always;
+      }
+
+      .page-3 {
+        page-break-before: always;
+      }
+
+      /* IMPORTANT: FIX CANVAS SIZE */
+      canvas {
+        width: 100% !important;
+        height: 400px !important;
+        max-height: 400px !important;
+      }
+
       table {
-        width: 100%;
         font-size: 0.75rem;
-        box-shadow: none;
-        border-radius: 0;
       }
 
       th,
       td {
-        padding: 4px 5px;
+        padding: 4px;
       }
 
-      .summary-title {
-        margin-top: 4px;
-        font-size: 0.85rem;
+      #haltBrakeChart {
+        display: none !important;
       }
 
-      .irregular-note {
-        width: 100%;
-        margin: 8px auto;
-        font-size: 0.8rem;
-        box-shadow: none;
+      #haltBrakeImage {
+        display: block !important;
       }
-
-      .meta-badge {
-        background: #111827 !important;
-        color: #f9fafb !important;
-      }
-
-      /* Force layout:
-           Page 1 = header + chart card
-           Page 2+ = summary + table + irregularities (and more pages if content overflows)
-        */
-      .page-1 {
-        page-break-after: always;
-        page-break-inside: avoid;
-      }
-
-      /* Allow page-2 (and following content) to flow naturally across as many pages as needed */
-      .page-2 {
-        page-break-before: always;
-        page-break-inside: avoid;
-        /* removed max-height and overflow so additional pages will print */
-      }
-
-      @media print {
-        .checked-by-cli {
-          margin-top: 28px;
-          font-size: 0.85rem;
-        }
-      }
-
-      /* If there are additional .report-block elements they will paginate normally */
     }
   </style>
 </head>
@@ -503,8 +470,8 @@
             📈 Plot Graph
           </button>
           <button type="button" class="btn btn-outline-secondary btn-app-outline d-inline-flex align-items-center gap-1"
-            onclick="window.print()">
-            🖨 Print Report
+            <button onclick="generatePDF()" class="btn btn-app-success d-inline-flex align-items-center gap-1">
+            📄 Generate PDF
           </button>
         </div>
 
@@ -626,18 +593,19 @@
         </div>
       </div>
     </div>
-    <div class="card card-app mb-3 report-block">
+    <div class="card card-app mb-3 report-block page-2">
       <div class="card-header card-header-app">
         <h6 class="mb-0">All Halt Braking Pattern</h6>
         <small class="text-muted">Distance vs Speed (All Stations)</small>
       </div>
       <div class="card-body">
         <canvas id="haltBrakeChart"></canvas>
+        <img id="haltBrakeImage" style="display:none; width:100%;" />
       </div>
     </div>
 
     <!-- TABLES & IRREGULARITIES = PAGE 2 -->
-    <div id="speedTableContainer" class="page-2"></div>
+    <div id="speedTableContainer" class="page-3"></div>
   </div>
 
   <script>
@@ -1095,9 +1063,6 @@
                 display: true,
                 text: "Distance Before Stop (m)",
               },
-              ticks: {
-                font: { weight: "bold" },
-              },
             },
             y: {
               title: {
@@ -1105,30 +1070,21 @@
                 text: "Speed (km/h)",
               },
               min: 0,
-              ticks: {
-                font: { weight: "bold" },
-              },
             },
           },
           plugins: {
             legend: {
               position: "bottom",
-              labels: {
-                boxWidth: 14,
-                font: { size: 11 },
-              },
             },
             tooltip: {
               callbacks: {
                 label: (ctx) =>
-                  `${ctx.dataset.label}: ${ctx.parsed.y} km/h @ ${Math.round(
-                    ctx.parsed.x
-                  )} m`,
+                  `${ctx.dataset.label}: ${ctx.parsed.y} km/h @ ${Math.round(ctx.parsed.x)} m`,
               },
             },
           },
-          plugins: [haltPatternLabels], // ✅ ADD THIS LINE
         },
+        plugins: [haltPatternLabels],   // ✅ correct placement
       });
 
       function buildHaltBrakingDatasets(seg, stopStations, dists) {
@@ -1634,13 +1590,23 @@
     attachStationAutocomplete("endStation", "endStationDropdown");
 
     window.addEventListener("beforeprint", () => {
-      PRINT_MODE = true;
-      if (currentChart) currentChart.update();
-    });
 
-    window.addEventListener("afterprint", () => {
-      PRINT_MODE = false;
-      if (currentChart) currentChart.update();
+      PRINT_MODE = true;
+
+      if (window.haltBrakeChartInstance) {
+
+        window.haltBrakeChartInstance.resize();
+        window.haltBrakeChartInstance.update("none");
+
+        const imgData = window.haltBrakeChartInstance.toBase64Image();
+        document.getElementById("haltBrakeImage").src = imgData;
+      }
+
+      if (currentChart) {
+        currentChart.resize();
+        currentChart.update("none");
+      }
+
     });
 
     async function sendReportToGoogleSheet(payload) {
@@ -1669,6 +1635,69 @@
 
       sendReportToGoogleSheet(LAST_REPORT_PAYLOAD);
     });
+    async function generatePDF() {
+
+      if (!currentChart || !window.haltBrakeChartInstance) {
+        alert("Please generate the report first.");
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF("landscape", "mm", "a4");
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      /* ================= PAGE 1 – SPEED ================= */
+
+      const speedImg = currentChart.toBase64Image();
+      pdf.setFontSize(14);
+      pdf.text("RTIS SPM ANALYSIS – SPEED PROFILE", 14, 15);
+      pdf.addImage(speedImg, "PNG", 10, 25, pageWidth - 20, 110);
+
+      /* ================= PAGE 2 – HALT ================= */
+
+      pdf.addPage();
+      const haltImg = window.haltBrakeChartInstance.toBase64Image();
+      pdf.setFontSize(14);
+      pdf.text("ALL HALT BRAKING PATTERN", 14, 15);
+      pdf.addImage(haltImg, "PNG", 10, 25, pageWidth - 20, 110);
+
+      /* ================= PAGE 3+ – SUMMARY AUTO SPLIT ================= */
+
+      pdf.addPage();
+
+      const element = document.getElementById("speedTableContainer");
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgWidth = pageWidth - 20;
+      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+      let position = 25;
+      let heightLeft = imgHeight;
+
+      pdf.setFontSize(14);
+      pdf.text("PERFORMANCE ANALYSIS SUMMARY", 14, 15);
+
+      pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
+      heightLeft -= (pageHeight - position);
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight + 25;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save("RTIS_SPM_ANALYSIS.pdf");
+    }
   </script>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
