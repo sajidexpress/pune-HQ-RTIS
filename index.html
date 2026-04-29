@@ -1643,7 +1643,12 @@
       }
 
       const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF("landscape", "mm", "a4");
+      const pdf = new jsPDF({
+  orientation: "landscape",
+  unit: "mm",
+  format: "a4",
+  compress: true   // 🔥 important
+});
 
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
@@ -1670,7 +1675,7 @@
       const element = document.getElementById("speedTableContainer");
 
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: 1,
         useCORS: true
       });
 
