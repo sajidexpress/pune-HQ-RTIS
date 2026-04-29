@@ -248,9 +248,9 @@
       background: #ffffff;
       border: 2px solid #000000;
       /* OUTER BORDER DARK BLACK */
-      border-radius: 0.9rem;
+      /* border-radius: 0.9rem; */
       overflow: hidden;
-      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.15);
+      /* box-shadow: 0 10px 28px rgba(15, 23, 42, 0.15); */
     }
 
     th,
@@ -284,7 +284,7 @@
     }
 
     .summary-title {
-      font-size: 1rem;
+      font-size: 1.5rem;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.12em;
@@ -337,7 +337,6 @@
     /* STATION COLUMN – THICK LEFT BORDER */
     table th:first-child,
     table td:first-child {
-      border-left: 4px solid #000000 !important;
       font-weight: 700;
     }
 
@@ -433,6 +432,10 @@
       #haltBrakeImage {
         display: block !important;
       }
+
+    }
+    #speedTableContainer{
+       padding: 20px;
     }
   </style>
 </head>
@@ -1658,7 +1661,7 @@
       const speedImg = currentChart.toBase64Image();
       pdf.setFontSize(14);
       pdf.text("RTIS SPM ANALYSIS – SPEED PROFILE", 14, 15);
-      pdf.addImage(speedImg, "PNG", 10, 25, pageWidth - 20, 110);
+      pdf.addImage(speedImg, "PNG", 10, 25, pageWidth - 20,  pageHeight - 50);
 
       /* ================= PAGE 2 – HALT ================= */
 
@@ -1666,7 +1669,7 @@
       const haltImg = window.haltBrakeChartInstance.toBase64Image();
       pdf.setFontSize(14);
       pdf.text("ALL HALT BRAKING PATTERN", 14, 15);
-      pdf.addImage(haltImg, "PNG", 10, 25, pageWidth - 20, 110);
+      pdf.addImage(haltImg, "PNG", 10, 25, pageWidth - 20, pageHeight - 50);
 
       /* ================= PAGE 3+ – SUMMARY AUTO SPLIT ================= */
 
@@ -1685,11 +1688,11 @@
       const imgWidth = pageWidth - 20;
       const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
 
-      let position = 25;
+      let position = 5;
       let heightLeft = imgHeight;
 
       pdf.setFontSize(14);
-      pdf.text("PERFORMANCE ANALYSIS SUMMARY", 14, 15);
+      // pdf.text("PERFORMANCE ANALYSIS SUMMARY", 14, 15);
 
       pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
       heightLeft -= (pageHeight - position);
