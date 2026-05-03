@@ -844,15 +844,18 @@ if (!fileName.includes("LP-") || !fileName.includes("ALP-")) {
   }
 
   // ---------- DATE ----------
-  let dateMatch = fileName.match(/(?:DATE|Dt)-(\d{2})-(\d{2})-(\d{2})/);
-  if (dateMatch) {
-    let dd = dateMatch[1];
-    let mm = dateMatch[2];
-    let yy = dateMatch[3];
-    let yyyy = "20" + yy;
+  // ---------- DATE (DATE/DT + YY/YYYY support) ----------
+let dateMatch = fileName.match(/(?:DATE|DT)-(\d{2})-(\d{2})-(\d{2}|\d{4})/i);
 
-    document.getElementById("runDate").value = `${yyyy}-${mm}-${dd}`;
-  }
+if (dateMatch) {
+  let dd = dateMatch[1];
+  let mm = dateMatch[2];
+  let yy = dateMatch[3];
+
+  let yyyy = yy.length === 2 ? "20" + yy : yy; // handle 26 or 2026
+
+  document.getElementById("runDate").value = `${yyyy}-${mm}-${dd}`;
+}
 }
       const r = new FileReader();
       r.onload = (evt) => {
