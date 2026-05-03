@@ -804,6 +804,56 @@
     document.getElementById("csvFile").addEventListener("change", (e) => {
       const f = e.target.files[0];
       if (!f) return;
+      // 🔹 SAFE AUTO FILL (ONLY IF VALID FORMAT)
+
+let fileName = f.name.replace(".csv", "");
+
+// ✅ Check required pattern
+if (!fileName.includes("LP-") || !fileName.includes("ALP-")) {
+  console.log("Auto-fill skipped: Invalid file name format");
+} else {
+
+  // ---------- LP ----------
+  let lpRaw = fileName.match(/LP-(.*?)ALP-/);
+  if (lpRaw) {
+    document.getElementById("driverName").value = lpRaw[1].trim();
+  }
+
+  // ---------- ALP ----------
+  let alpRaw = fileName.match(/ALP-(.*?)LN-/);
+  if (alpRaw) {
+    document.getElementById("alp").value = alpRaw[1].trim();
+  }
+
+  // ---------- LOCO ----------
+  let locoMatch = fileName.match(/LN-(\d+)/);
+  if (locoMatch) {
+    document.getElementById("locono").value = locoMatch[1];
+  }
+
+  // ---------- TRAIN ----------
+  let trainMatch = fileName.match(/TN-(\d+)/);
+  if (trainMatch) {
+    document.getElementById("trainNo").value = trainMatch[1];
+  }
+
+  // ---------- SECTION ----------
+  let secMatch = fileName.match(/(?:SEC|Sec)-([A-Z\-]+)/);
+  if (secMatch) {
+    document.getElementById("section").value = secMatch[1];
+  }
+
+  // ---------- DATE ----------
+  let dateMatch = fileName.match(/(?:DATE|Dt)-(\d{2})-(\d{2})-(\d{2})/);
+  if (dateMatch) {
+    let dd = dateMatch[1];
+    let mm = dateMatch[2];
+    let yy = dateMatch[3];
+    let yyyy = "20" + yy;
+
+    document.getElementById("runDate").value = `${yyyy}-${mm}-${dd}`;
+  }
+}
       const r = new FileReader();
       r.onload = (evt) => {
         const lines = evt.target.result
