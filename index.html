@@ -434,8 +434,9 @@
       }
 
     }
-    #speedTableContainer{
-       padding: 20px;
+
+    #speedTableContainer {
+      padding: 20px;
     }
   </style>
 </head>
@@ -806,57 +807,58 @@
       if (!f) return;
       // 🔹 SAFE AUTO FILL (ONLY IF VALID FORMAT)
 
-let fileName = f.name.replace(".csv", "");
+      let fileName = f.name.replace(".csv", "");
 
-// ✅ Check required pattern
-if (!fileName.includes("LP-") || !fileName.includes("ALP-")) {
-  console.log("Auto-fill skipped: Invalid file name format");
-} else {
+      // ✅ Check required pattern
+      if (!fileName.includes("LP-") || !fileName.includes("ALP-")) {
+        console.log("Auto-fill skipped: Invalid file name format");
+      } else {
 
-  // ---------- LP ----------
-  let lpRaw = fileName.match(/LP-(.*?)ALP-/);
-  if (lpRaw) {
-    document.getElementById("driverName").value = lpRaw[1].trim();
-  }
+        // ---------- LP (flexible end) ----------
+        let lpRaw = fileName.match(/LP-(.*?)(ALP-|LN-|TN-|SEC-|DATE-|DT-)/i);
+        if (lpRaw) {
+          document.getElementById("driverName").value = lpRaw[1].trim();
+        }
 
-  // ---------- ALP ----------
-  let alpRaw = fileName.match(/ALP-(.*?)LN-/);
-  if (alpRaw) {
-    document.getElementById("alp").value = alpRaw[1].trim();
-  }
+        // ---------- ALP (flexible end) ----------
+        let alpRaw = fileName.match(/ALP-(.*?)(LP-|LN-|TN-|SEC-|DATE-|DT-|Dt-)/i);
+        if (alpRaw) {
+          document.getElementById("alp").value = alpRaw[1].trim();
+        }
 
-  // ---------- LOCO ----------
-  let locoMatch = fileName.match(/LN-(\d+)/);
-  if (locoMatch) {
-    document.getElementById("locono").value = locoMatch[1];
-  }
+        // ---------- LOCO ----------
+        let locoMatch = fileName.match(/LN-(\d+)/i);
+        if (locoMatch) {
+          document.getElementById("locono").value = locoMatch[1];
+        }
 
-  // ---------- TRAIN ----------
-  let trainMatch = fileName.match(/TN-(\d+)/);
-  if (trainMatch) {
-    document.getElementById("trainNo").value = trainMatch[1];
-  }
+        // ---------- TRAIN ----------
+        let trainMatch = fileName.match(/TN-(\d+)/i);
+        if (trainMatch) {
+          document.getElementById("trainNo").value = trainMatch[1];
+        }
 
-  // ---------- SECTION ----------
-  let secMatch = fileName.match(/(?:SEC|Sec)-([A-Z\-]+)/);
-  if (secMatch) {
-    document.getElementById("section").value = secMatch[1];
-  }
+        // ---------- SECTION ----------
+        let secMatch = fileName.match(/SEC-(.*?)(DATE-|DT-)/i);
 
-  // ---------- DATE ----------
-  // ---------- DATE (DATE/DT + YY/YYYY support) ----------
-let dateMatch = fileName.match(/(?:DATE|DT)-(\d{2})-(\d{2})-(\d{2}|\d{4})/i);
+        if (secMatch) {
+          document.getElementById("section").value = secMatch[1].trim();
+        }
 
-if (dateMatch) {
-  let dd = dateMatch[1];
-  let mm = dateMatch[2];
-  let yy = dateMatch[3];
+        // ---------- DATE (ALL FORMATS) ----------
+        // ---------- DATE (DATE / DT / Dt / date / dt + all formats) ----------
+        let dateMatch = fileName.match(/(?:DATE|DT)-(\d{2})[.\-](\d{2})[.\-](\d{4}|\d{2})/i);
 
-  let yyyy = yy.length === 2 ? "20" + yy : yy; // handle 26 or 2026
+        if (dateMatch) {
+          let dd = dateMatch[1];
+          let mm = dateMatch[2];
+          let yy = dateMatch[3];
 
-  document.getElementById("runDate").value = `${yyyy}-${mm}-${dd}`;
-}
-}
+          let yyyy = yy.length === 2 ? "20" + yy : yy;
+
+          document.getElementById("runDate").value = `${yyyy}-${mm}-${dd}`;
+        }
+      }
       const r = new FileReader();
       r.onload = (evt) => {
         const lines = evt.target.result
@@ -1700,11 +1702,11 @@ if (dateMatch) {
 
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({
-  orientation: "landscape",
-  unit: "mm",
-  format: "a4",
-  compress: true   // 🔥 important
-});
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+        compress: true   // 🔥 important
+      });
 
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
@@ -1714,7 +1716,7 @@ if (dateMatch) {
       const speedImg = currentChart.toBase64Image();
       pdf.setFontSize(14);
       pdf.text("RTIS SPM ANALYSIS – SPEED PROFILE", 14, 15);
-      pdf.addImage(speedImg, "PNG", 10, 25, pageWidth - 20,  pageHeight - 50);
+      pdf.addImage(speedImg, "PNG", 10, 25, pageWidth - 20, pageHeight - 50);
 
       /* ================= PAGE 2 – HALT ================= */
 
@@ -1760,22 +1762,22 @@ if (dateMatch) {
       pdf.save("RTIS_SPM_ANALYSIS.pdf");
     }
     document.addEventListener("paste", function (e) {
-  const text = (e.clipboardData || window.clipboardData).getData("text");
+      const text = (e.clipboardData || window.clipboardData).getData("text");
 
-  // Split by comma
-  const parts = text.split(",").map(x => x.trim());
+      // Split by comma
+      const parts = text.split(",").map(x => x.trim());
 
-  if (parts.length >= 6) {
-    document.getElementById("driverName").value = parts[0] || "";
-    document.getElementById("alp").value = parts[1] || "";
-    document.getElementById("trainNo").value = parts[2] || "";
-    document.getElementById("locono").value = parts[3] || "";
-    document.getElementById("section").value = parts[4] || "";
-    document.getElementById("runDate").value = parts[5] || "";
+      if (parts.length >= 6) {
+        document.getElementById("driverName").value = parts[0] || "";
+        document.getElementById("alp").value = parts[1] || "";
+        document.getElementById("trainNo").value = parts[2] || "";
+        document.getElementById("locono").value = parts[3] || "";
+        document.getElementById("section").value = parts[4] || "";
+        document.getElementById("runDate").value = parts[5] || "";
 
-    e.preventDefault(); // stop normal paste
-  }
-});
+        e.preventDefault(); // stop normal paste
+      }
+    });
   </script>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
