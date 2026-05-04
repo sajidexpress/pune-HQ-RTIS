@@ -1670,8 +1670,7 @@
     async function sendReportToGoogleSheet(payload) {
       console.log("Saving payload:", LAST_REPORT_PAYLOAD);
 
-      const WEB_APP_URL =
-        "https://script.google.com/macros/s/AKfycbywlF-vX52lmsxiVgxO0EK8e09l5umubp8ry6D6ant2C5xj9IA0yZhpAenyw2x9FmUz/exec";
+      const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby-DDnnGi_VYtv7hd3PwuzCncW1tK94nje17bsK0pMrLkuXMrUD9GaAMbZXN_gIBKmM/exec"
 
       const res = await fetch(WEB_APP_URL, {
         method: "POST",
