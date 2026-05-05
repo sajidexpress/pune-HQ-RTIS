@@ -539,7 +539,15 @@
           <!-- Analysed By -->
           <div class="col-12 col-md-6 col-lg-2">
             <label for="analysedBy" class="form-label">Analysed By</label>
-            <input type="text" id="analysedBy" class="form-control" />
+            <input list="cliList" id="analysedBy" class="form-control" placeholder="Select or type">
+
+            <datalist id="cliList">
+              <option value="SAKSHI">
+              <option value="PARVEZ">
+              <option value="SAMADHAN">
+              <option value="PRANESH">
+              <option value="HQ CLI">
+            </datalist>
           </div>
 
           <!-- Stations with autocomplete select box -->
@@ -660,13 +668,30 @@
     function calculateDuration(startStr, endStr) {
       if (!startStr || !endStr) return { formatted: "-" };
 
-      const getSec = (s) => {
-        const time = s.split(" ").pop();
-        const [h, m, sec] = time.split(":").map(Number);
-        return h * 3600 + m * 60 + sec;
-      };
+      function getSeconds(str) {
+        if (!str) return null;
 
-      let diff = getSec(endStr) - getSec(startStr);
+        // extract time part (HH:MM:SS or HH:MM)
+        const match = str.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+        if (!match) return null;
+
+        const h = parseInt(match[1]) || 0;
+        const m = parseInt(match[2]) || 0;
+        const s = parseInt(match[3]) || 0;
+
+        return h * 3600 + m * 60 + s;
+      }
+
+      const startSec = getSeconds(startStr);
+      const endSec = getSeconds(endStr);
+
+      if (startSec === null || endSec === null) {
+        return { formatted: "-" };
+      }
+
+      let diff = endSec - startSec;
+
+      // next day case
       if (diff < 0) diff += 86400;
 
       const h = Math.floor(diff / 3600);
@@ -833,9 +858,10 @@
         }
 
         // ---------- TRAIN ----------
-        let trainMatch = fileName.match(/TN-(\d+)/i);
+        let trainMatch = fileName.match(/TN-(.*?)(LP-|ALP-|LN-|SEC-|DATE-|DT-|$)/i);
+
         if (trainMatch) {
-          document.getElementById("trainNo").value = trainMatch[1];
+          document.getElementById("trainNo").value = trainMatch[1].trim();
         }
 
         // ---------- SECTION ----------
@@ -1776,6 +1802,18 @@
 
         e.preventDefault(); // stop normal paste
       }
+    });
+    // 🔹 Set today's date in Analysed On field
+    document.addEventListener("DOMContentLoaded", () => {
+      const today = new Date();
+
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+
+      const formatted = `${yyyy}-${mm}-${dd}`;
+
+      document.getElementById("analysedOn").value = formatted;
     });
   </script>
 
